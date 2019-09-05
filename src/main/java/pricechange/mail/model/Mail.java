@@ -1,4 +1,4 @@
-package pricechange.mail;
+package pricechange.mail.model;
 
 import lombok.AccessLevel;
 import lombok.Data;

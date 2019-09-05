@@ -66,24 +66,25 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>copy-resource-one</id>
-                        <phase>package</phase>
+                        <id>copy-resources</id>
+                        <phase>validate</phase>
                         <goals>
                             <goal>copy-resources</goal>
                         </goals>
-                        <configuration>
-                            <outputDirectory>${basedir}/target</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>/</directory>
-                                    <includes>
-                                        <include>mail.txt</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <outputDirectory>${basedir}/target/</outputDirectory>
+                    <resources>
+                        <resource>
+                            <directory>/</directory>
+                            <filtering>true</filtering>
+                            <includes>
+                                <include>mail.txt</include>
+                            </includes>
+                        </resource>
+                    </resources>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

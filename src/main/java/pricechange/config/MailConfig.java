@@ -2,7 +2,7 @@ package pricechange.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import pricechange.mail.Mail;
+import pricechange.mail.model.Mail;
 
 import java.io.File;
 import java.io.FileInputStream;
