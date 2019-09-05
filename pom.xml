@@ -13,6 +13,7 @@
         <encoding>UTF-8</encoding>
         <apache.poi.version>4.1.0</apache.poi.version>
         <opencsv.version>4.6</opencsv.version>
+        <lombok.version>1.18.8</lombok.version>
     </properties>
 
     <parent>
@@ -41,6 +42,11 @@
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>${opencsv.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
         </dependency>
     </dependencies>
 

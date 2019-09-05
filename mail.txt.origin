@@ -1,0 +1,8 @@
+mail.username=
+mail.password=
+mail.inbox.folder=
+
+mail.store.protocol=imap
+mail.host=imap.mail.ru
+mail.imap.ssl.enable=true
+mail.imap.port=993
