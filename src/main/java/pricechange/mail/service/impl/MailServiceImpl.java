@@ -19,6 +19,7 @@ import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.search.FlagTerm;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -56,7 +57,11 @@ public class MailServiceImpl implements MailService {
 
                             byte[] bytes = new byte[part.getSize()];
                             part.getInputStream().read(bytes);
-                            OutputStream os = new FileOutputStream(m.getSubject());
+                            File priceDir = new File("price");
+                            if (!priceDir.exists() || !priceDir.isDirectory()) {
+                                priceDir.mkdir();
+                            }
+                            OutputStream os = new FileOutputStream(priceDir + "/" + m.getSubject());
                             BufferedOutputStream bos = new BufferedOutputStream(os);
                             bos.write(bytes);
                             bos.close();
