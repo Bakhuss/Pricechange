@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CSVPrice {
+public class CSVPrice4KITAIAVTORUS {
     String number;
     String model;
     String name;
