@@ -75,9 +75,11 @@ public class MailServiceImpl implements MailService {
 
                             if (part.getFileName().equals("Price4KITAIAVTORUS.csv")) {
                                 getPartkom(part);
+                                fileName = "ПАРТКОМ.csv";
                             }
                             if (fileName.toLowerCase().endsWith(".txt")) {
                                 getIksora(part);
+                                fileName = "ИКСОРА " + fileName.split(" ")[0] + ".txt";
                             }
 
                             byte[] bytes = new byte[part.getSize()];
