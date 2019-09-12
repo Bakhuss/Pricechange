@@ -1,8 +1,20 @@
-mail.username=
-mail.password=
+# Входящие
+in.username=
+in.password=
 mail.inbox.folder=
 
 mail.store.protocol=imap
 mail.host=imap.mail.ru
-mail.imap.ssl.enable=true
 mail.imap.port=993
+mail.imap.ssl.enable=true
+
+# Исходящие
+out.username=
+out.password=
+mail.out.to=
+mail.out.reply.to=
+
+mail.smtp.host=smtp.mail.ru
+mail.smtp.port=25
+#mail.smtp.auth=true
+#mail.smtp.ssl.enable=true
