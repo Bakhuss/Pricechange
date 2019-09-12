@@ -16,6 +16,7 @@ public class Application {
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(Application.class, args);
-        mailService.getNewLetters();
+        System.out.println("list: " + mailService.receiveMessage().size());
+//        mailService.sendMessage("message");
     }
 }

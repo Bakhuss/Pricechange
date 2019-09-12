@@ -8,20 +8,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pricechange.csv.model.CSVIksora;
-import pricechange.csv.model.CSVPrice4KITAIAVTORUS;
+import pricechange.csv.model.CSVPartkom;
+import pricechange.mail.model.FileByBytes;
 import pricechange.mail.model.Mail;
+import pricechange.mail.model.MailAuthenticator;
 import pricechange.mail.service.MailService;
 
-import javax.mail.Authenticator;
+import javax.activation.FileDataSource;
+import javax.mail.Address;
 import javax.mail.Flags;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Part;
-import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Store;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
 import javax.mail.search.FlagTerm;
 import java.io.BufferedOutputStream;
@@ -32,6 +39,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,20 +49,26 @@ import static java.util.stream.Collectors.toMap;
 @Service
 public class MailServiceImpl implements MailService {
     private final Logger log = LoggerFactory.getLogger(MailServiceImpl.class);
-    private final Mail mail;
+    private final Mail mailIn;
+    private final Mail mailOut;
     private final HashSet<String> makerFilter;
 
     @Autowired
-    public MailServiceImpl(Mail mail, HashSet<String> makerFilter) {
-        this.mail = mail;
+    public MailServiceImpl(Mail mailIn, Mail mailOut, HashSet<String> makerFilter) {
+        this.mailIn = mailIn;
+        this.mailOut = mailOut;
         this.makerFilter = makerFilter;
     }
 
-    public void getNewLetters() throws MessagingException {
-        Session session = Session.getDefaultInstance(mail.getProperties(), new MailAuthenticator());
-        Store store = session.getStore(mail.getProperties().getProperty("mail.store.protocol"));
-        store.connect(mail.getProperties().getProperty("mail.host"), null, null);
-        Folder inboxFolder = store.getFolder(mail.getProperties().getProperty("mail.inbox.folder"));
+    public List<FileByBytes> receiveMessage() throws MessagingException {
+        List<FileByBytes> fileByBytes = new ArrayList<>();
+        Session session = Session.getDefaultInstance(
+                mailIn.getProperties(),
+                new MailAuthenticator(mailIn.getUsername(), mailIn.getPassword())
+        );
+        Store store = session.getStore(mailIn.getProperties().getProperty("mail.store.protocol"));
+        store.connect(mailIn.getProperties().getProperty("mail.host"), null, null);
+        Folder inboxFolder = store.getFolder(mailIn.getProperties().getProperty("mail.inbox.folder"));
         inboxFolder.open(Folder.READ_ONLY);
         System.out.println(inboxFolder.getMessages().length);
         for (Message m : inboxFolder.getMessages()) {
@@ -62,6 +76,7 @@ public class MailServiceImpl implements MailService {
         }
         Message[] newMessages = inboxFolder.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
         System.out.println("new messages");
+
         for (Message m : newMessages) {
             try {
                 if (m.getContent() instanceof Multipart) {
@@ -84,13 +99,18 @@ public class MailServiceImpl implements MailService {
 
                             byte[] bytes = new byte[part.getSize()];
                             part.getInputStream().read(bytes);
+                            FileByBytes fbb = new FileByBytes();
+                            fbb.setName(fileName);
+                            fbb.setBytes(bytes);
+                            fileByBytes.add(fbb);
+
                             File priceDir = new File("price");
                             if (!priceDir.exists() || !priceDir.isDirectory()) {
                                 priceDir.mkdir();
                             }
 
                             OutputStream os = new FileOutputStream(priceDir + "/" + fileName);
-                            BufferedOutputStream bos = new BufferedOutputStream(os);
+                            OutputStream bos = new BufferedOutputStream(os);
                             bos.write(bytes);
                             bos.close();
                             os.close();
@@ -101,21 +121,36 @@ public class MailServiceImpl implements MailService {
                 e.printStackTrace();
             }
         }
-        System.out.println("count: " + newMessages.length);
         store.close();
-
-        log.info(mail.toString());
+        return fileByBytes;
     }
 
-    private class MailAuthenticator extends Authenticator {
-        public PasswordAuthentication getPasswordAuthentication() {
-            return new PasswordAuthentication(mail.getUsername(), mail.getPassword());
-        }
+    public void sendMessage(String fileName) throws MessagingException {
+        Session session = Session.getDefaultInstance(
+                mailOut.getProperties(),
+                new MailAuthenticator("ali.da", mailOut.getPassword())
+        );
+        InternetAddress emailFrom = new InternetAddress(mailOut.getUsername());
+        InternetAddress emailTo = new InternetAddress(mailOut.getUsername());
+        String reply = mailOut.getProperties().getProperty("mail.out.reply.to");
+        InternetAddress replyTo = (reply != null) ? new InternetAddress(reply) : null;
+        MimeMessage message = new MimeMessage(session);
+        message.setFrom(emailFrom);
+        message.setRecipient(Message.RecipientType.TO, emailTo);
+        message.setSubject(fileName);
+        if (replyTo != null) message.setReplyTo(new Address[]{replyTo});
+        FileDataSource fds = new FileDataSource(fileName);
+        Multipart mp = new MimeMultipart();
+        MimeBodyPart bodyPart = new MimeBodyPart();
+        bodyPart.setContent("text", "text/plain; charset=utf-8");
+        mp.addBodyPart(bodyPart);
+        message.setContent(mp);
+        Transport.send(message);
     }
 
     private ColumnPositionMappingStrategy setColumMappingPartkom() {
         ColumnPositionMappingStrategy strategy = new ColumnPositionMappingStrategy();
-        strategy.setType(CSVPrice4KITAIAVTORUS.class);
+        strategy.setType(CSVPartkom.class);
         String[] columns = new String[]{"number", "model", "name", "field4", "field5", "field6", "field7"};
         strategy.setColumnMapping(columns);
         return strategy;
@@ -132,19 +167,19 @@ public class MailServiceImpl implements MailService {
     private void getPartkom(Part part) throws IOException, MessagingException {
         Reader reader = new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8);
         CSVReader csvReader = new CSVReader(reader, ';');
-        CsvToBean<CSVPrice4KITAIAVTORUS> bean = new CsvToBean<>();
+        CsvToBean<CSVPartkom> bean = new CsvToBean<>();
         bean.setCsvReader(csvReader);
         bean.setMappingStrategy(setColumMappingPartkom());
-        List<CSVPrice4KITAIAVTORUS> listPrice = bean.parse();
+        List<CSVPartkom> listPrice = bean.parse();
 
         System.out.println(listPrice.size());
-        List<CSVPrice4KITAIAVTORUS> filteredPrice = listPrice.stream()
+        List<CSVPartkom> filteredPrice = listPrice.stream()
                 .filter(p -> makerFilter.contains(p.getModel().trim().toLowerCase()))
                 .collect(Collectors.toList());
         System.out.println("filtered price size: " + filteredPrice.size());
 
         filteredPrice.stream()
-                .collect(toMap(CSVPrice4KITAIAVTORUS::getModel, p -> p, (p, q) -> p)).values()
+                .collect(toMap(CSVPartkom::getModel, p -> p, (p, q) -> p)).values()
                 .forEach(System.out::println);
     }
 

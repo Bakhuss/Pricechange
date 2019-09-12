@@ -1,7 +1,12 @@
 package pricechange.mail.service;
 
+import pricechange.mail.model.FileByBytes;
+
 import javax.mail.MessagingException;
+import java.util.List;
 
 public interface MailService {
-    void getNewLetters() throws MessagingException;
+    List<FileByBytes> receiveMessage() throws MessagingException;
+
+    void sendMessage(String fileName) throws MessagingException;
 }

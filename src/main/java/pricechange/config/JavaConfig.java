@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Scanner;
 
 @Configuration
@@ -25,5 +26,18 @@ public class JavaConfig {
             throw new RuntimeException("Not found property file " + fileName);
         }
         return hashSet;
+    }
+
+    @Bean
+    public Properties mailProps() {
+        String fileName = "mail.txt";
+        Properties props = new Properties();
+        try (InputStream is = new FileInputStream(fileName)) {
+            props.load(is);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Not found property file " + fileName);
+        }
+        return props;
     }
 }
