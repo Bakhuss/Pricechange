@@ -33,17 +33,15 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
 import javax.mail.search.FlagTerm;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
@@ -78,6 +76,7 @@ public class MailServiceImpl implements MailService {
         }
         Message[] newMessages = inboxFolder.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
         System.out.println("new messages");
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         for (Message m : newMessages) {
             try {
@@ -100,30 +99,54 @@ public class MailServiceImpl implements MailService {
                                 System.out.println("filtered price size: " + iksora.size());
                                 fileName = "ИКСОРА " + fileName.split(" ")[0] + ".csv";
                             }
+                            final String name = fileName;
 
-                            byte[] bytes = new byte[part.getSize()];
-                            part.getInputStream().read(bytes);
-                            FileByBytes fbb = new FileByBytes();
-                            fbb.setName(fileName);
-                            fbb.setBytes(bytes);
-                            fileByBytes.add(fbb);
+                            executorService.submit(() -> {
+                                byte[] bytes;
+                                try {
+                                    bytes = new byte[part.getSize()];
+                                    part.getInputStream().read(bytes);
+                                    FileByBytes fbb = new FileByBytes();
+                                    fbb.setName(name);
+                                    fbb.setBytes(bytes);
+                                    fileByBytes.add(fbb);
+                                } catch (MessagingException | IOException e) {
+                                    e.printStackTrace();
+                                }
+                            });
 
-                            File priceDir = new File("price");
-                            if (!priceDir.exists() || !priceDir.isDirectory()) {
-                                priceDir.mkdir();
-                            }
+//                            byte[] bytes = new byte[part.getSize()];
+//                            part.getInputStream().read(bytes);
+//                            FileByBytes fbb = new FileByBytes();
+//                            fbb.setName(fileName);
+//                            fbb.setBytes(bytes);
+//                            fileByBytes.add(fbb);
 
-                            OutputStream os = new FileOutputStream(priceDir + "/" + fileName);
-                            OutputStream bos = new BufferedOutputStream(os);
-                            bos.write(bytes);
-                            bos.close();
-                            os.close();
+//                            File file = new File();
+//                            file.save(fbb);
+
+//                            File priceDir = new File("price");
+//                            if (!priceDir.exists() || !priceDir.isDirectory()) {
+//                                priceDir.mkdir();
+//                            }
+//
+//                            OutputStream os = new FileOutputStream(priceDir + "/" + fileName);
+//                            OutputStream bos = new BufferedOutputStream(os);
+//                            bos.write(bytes);
+//                            bos.close();
+//                            os.close();
                         }
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+        executorService.shutdown();
+        System.out.println("exec.serv.isShutdown: " + executorService.isShutdown());
+        System.out.println("exec.serv.isTerminated: " + executorService.isTerminated());
+        while (!executorService.isTerminated()) {
+
         }
         store.close();
         return fileByBytes;
