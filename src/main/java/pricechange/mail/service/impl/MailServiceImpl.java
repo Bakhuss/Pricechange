@@ -1,6 +1,8 @@
 package pricechange.mail.service.impl;
 
+import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import org.slf4j.Logger;
@@ -89,12 +91,14 @@ public class MailServiceImpl implements MailService {
                             System.out.println(fileName);
 
                             if (part.getFileName().equals("Price4KITAIAVTORUS.csv")) {
-                                getPartkom(part);
+                                List<CSVPartkom> partkom = getPartkom(part);
+                                System.out.println("filtered price size: " + partkom.size());
                                 fileName = "ПАРТКОМ.csv";
                             }
                             if (fileName.toLowerCase().endsWith(".txt")) {
-                                getIksora(part);
-                                fileName = "ИКСОРА " + fileName.split(" ")[0] + ".txt";
+                                List<CSVIksora> iksora = getIksora(part);
+                                System.out.println("filtered price size: " + iksora.size());
+                                fileName = "ИКСОРА " + fileName.split(" ")[0] + ".csv";
                             }
 
                             byte[] bytes = new byte[part.getSize()];
@@ -148,25 +152,12 @@ public class MailServiceImpl implements MailService {
         Transport.send(message);
     }
 
-    private ColumnPositionMappingStrategy setColumMappingPartkom() {
-        ColumnPositionMappingStrategy strategy = new ColumnPositionMappingStrategy();
-        strategy.setType(CSVPartkom.class);
-        String[] columns = new String[]{"number", "model", "name", "field4", "field5", "field6", "field7"};
-        strategy.setColumnMapping(columns);
-        return strategy;
-    }
-
-    private ColumnPositionMappingStrategy setColumMappingIksora() {
-        ColumnPositionMappingStrategy strategy = new ColumnPositionMappingStrategy();
-        strategy.setType(CSVIksora.class);
-        String[] columns = new String[]{"makerName", "detailNumber", "detailName", "quantity", "outputPrice", "partyCount"};
-        strategy.setColumnMapping(columns);
-        return strategy;
-    }
-
-    private void getPartkom(Part part) throws IOException, MessagingException {
+    private List<CSVPartkom> getPartkom(Part part) throws IOException, MessagingException {
         Reader reader = new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8);
-        CSVReader csvReader = new CSVReader(reader, ';');
+        CSVReader csvReader = new CSVReaderBuilder(reader)
+                .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                .build();
+
         CsvToBean<CSVPartkom> bean = new CsvToBean<>();
         bean.setCsvReader(csvReader);
         bean.setMappingStrategy(setColumMappingPartkom());
@@ -176,16 +167,27 @@ public class MailServiceImpl implements MailService {
         List<CSVPartkom> filteredPrice = listPrice.stream()
                 .filter(p -> makerFilter.contains(p.getModel().trim().toLowerCase()))
                 .collect(Collectors.toList());
-        System.out.println("filtered price size: " + filteredPrice.size());
 
         filteredPrice.stream()
                 .collect(toMap(CSVPartkom::getModel, p -> p, (p, q) -> p)).values()
                 .forEach(System.out::println);
+        return filteredPrice;
     }
 
-    private void getIksora(Part part) throws IOException, MessagingException {
+    private ColumnPositionMappingStrategy setColumMappingPartkom() {
+        ColumnPositionMappingStrategy strategy = new ColumnPositionMappingStrategy();
+        strategy.setType(CSVPartkom.class);
+        String[] columns = new String[]{"number", "model", "name", "field4", "field5", "field6", "field7"};
+        strategy.setColumnMapping(columns);
+        return strategy;
+    }
+
+    private List<CSVIksora> getIksora(Part part) throws IOException, MessagingException {
         Reader reader = new InputStreamReader(part.getInputStream(), StandardCharsets.UTF_8);
-        CSVReader csvReader = new CSVReader(reader, ';');
+        CSVReader csvReader = new CSVReaderBuilder(reader)
+                .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                .build();
+
         CsvToBean<CSVIksora> bean = new CsvToBean<>();
         bean.setCsvReader(csvReader);
         bean.setMappingStrategy(setColumMappingIksora());
@@ -195,10 +197,18 @@ public class MailServiceImpl implements MailService {
         List<CSVIksora> filteredPrice = listPrice.stream()
                 .filter(p -> makerFilter.contains(p.getMakerName().trim().toLowerCase()))
                 .collect(Collectors.toList());
-        System.out.println("filtered price size: " + filteredPrice.size());
 
         filteredPrice.stream()
                 .collect(toMap(CSVIksora::getMakerName, p -> p, (p, q) -> p)).values()
                 .forEach(System.out::println);
+        return filteredPrice;
+    }
+
+    private ColumnPositionMappingStrategy setColumMappingIksora() {
+        ColumnPositionMappingStrategy strategy = new ColumnPositionMappingStrategy();
+        strategy.setType(CSVIksora.class);
+        String[] columns = new String[]{"makerName", "detailNumber", "detailName", "quantity", "outputPrice", "partyCount"};
+        strategy.setColumnMapping(columns);
+        return strategy;
     }
 }
