@@ -11,7 +11,7 @@
     <properties>
         <java.version>1.8</java.version>
         <encoding>UTF-8</encoding>
-        <apache.poi.version>4.1.0</apache.poi.version>
+        <apache.poi.version>4.1.1</apache.poi.version>
         <opencsv.version>4.6</opencsv.version>
         <lombok.version>1.18.8</lombok.version>
     </properties>
